@@ -1,0 +1,7 @@
+test
+BedOverlap(sample0.bed, sample1.bed, 0.3), compare output with intersect_0to1_0.3.bed
+BedOverlap(sample0.bed, sample1.bed, 0.5), compare output with intersect_0to1_0.5.bed
+BedOverlap(sample0.bed, sample1.bed, 0.7), compare output with intersect_0to1_0.7.bed
+BedOverlap(sample1.bed, sample0.bed, 0.3), compare output with intersect_1to0_0.3.bed
+BedOverlap(sample1.bed, sample0.bed, 0.5), compare output with intersect_1to0_0.5.bed
+BedOverlap(sample1.bed, sample0.bed, 0.7), compare output with intersect_1to0_0.7.bed
