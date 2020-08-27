@@ -21,6 +21,8 @@ def overlap(min1, max1, min2, max2):
 def BedOverlap(bed1, bed2, overlapPercent):
     p0, p1 = 0, 0
     output = []
+    
+    ##### TODO change to raise error message
     if(not(all((isinstance(x[0], str)) and (isinstance(x[1], int)) and (isinstance(x[2], int))) for x in bed1)): return "Invalid Input in Bed1"
     if(not(all((isinstance(x[0], str)) and (isinstance(x[1], int)) and (isinstance(x[2], int))) for x in bed2)): return "Invalid Input in Bed2"
     
@@ -54,7 +56,9 @@ def BedOverlap(bed1, bed2, overlapPercent):
             tempList = []
             tempList.append(bed1[p0])
             tempList.append(bed2[p1])
-            tempList.append('100')
+            
+            ### TODO confirm if this should be integer?
+            tempList.append('100') 
             output.append(tempList)
             p0 +=1
         elif a0<=a1<=b1<=b0:
@@ -79,6 +83,8 @@ def BedOverlap(bed1, bed2, overlapPercent):
             p1+=1
         #else:
             #break
+            
+    ## TODO: output list
     return np.array(output,dtype=object)
         
     
