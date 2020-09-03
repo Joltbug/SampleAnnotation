@@ -27,8 +27,12 @@ def BedOverlap(bed1, bed2, overlapPercent):
     if(not(all((isinstance(x[0], str)) and (isinstance(x[1], int)) and (isinstance(x[2], int))) for x in bed2)): return "Invalid Input in Bed2"
     
     while p0 < len(bed1) and p1 < len(bed2):
-        while (bed1[p0][0] < bed2[p1][0]): p0 = p0 +1
-        while (bed1[p0][0] > bed2[p1][0]): p1 = p1 +1
+        while (bed1[p0][0] < bed2[p1][0] and p0 < (len(bed1)-1)): 
+            p0 = p0 + 1
+        while (bed1[p0][0] > bed2[p1][0] and p1 < (len(bed2)-1)): 
+            p1 = p1 +1
+        if(p0 >= len(bed1)):break
+        if(p1 >= len(bed2)):break
         
         a0, b0, a1, b1 = int(bed1[p0][1]), int(bed1[p0][2]), int(bed2[p1][1]), int(bed2[p1][2])
         if (a0<b0<a1<b1):
