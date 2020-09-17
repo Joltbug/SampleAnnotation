@@ -1,0 +1,7 @@
+background: uATAC.PBMC.bed
+cell_type:
+  B: uATAC.B.bed
+  CD4: uATAC.CD4.bed
+  CD8: uATAC.CD8.bed
+  Mono: uATAC.M.bed4
+  T: uATAC.T.bed
