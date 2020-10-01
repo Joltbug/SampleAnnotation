@@ -1,0 +1,33 @@
+background: background_peaks.bed
+cell_type:
+  Basophil: Basophil.bed
+  CLP: CLP.bed
+  CMP_BMP: CMP_BMP.bed
+  Central memory CD8 T: Central memory CD8 T.bed
+  Effector memory CD8 T: Effector memory CD8 T.bed
+  GMP: GMP.bed
+  Gamma delta T: Gamma delta T.bed
+  HSC_MPP: HSC_MPP.bed
+  Immature NK: Immature NK.bed
+  LMPP: LMPP.bed
+  MDP: MDP.bed
+  MEP: MEP.bed
+  Mature NK1: Mature NK1.bed
+  Mature NK2: Mature NK2.bed
+  Memory B: Memory B.bed
+  Memory CD4 T: Memory CD4 T.bed
+  Monocyte 1: Monocyte 1.bed
+  Monocyte 2: Monocyte 2.bed
+  Naive B: Naive B.bed
+  Naive CD4 T1: Naive CD4 T1.bed
+  Naive CD4 T2: Naive CD4 T2.bed
+  Naive CD8 T1: Naive CD8 T1.bed
+  Naive CD8 T2: Naive CD8 T2.bed
+  Naive CD8 T3: Naive CD8 T3.bed
+  Naive Treg: Naive Treg.bed
+  Plasma cell: Plasma cell.bed
+  Pre-B: Pre-B.bed
+  Pro-B: Pro-B.bed
+  Treg: Treg.bed
+  cDC: cDC.bed
+  pDC: pDC.bed
