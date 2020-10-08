@@ -1,0 +1,9 @@
+background: background.bed
+cell_type:
+  Bcell: Bcell.bed
+  CD34-Bone-Marrow: CD34-Bone-Marrow.bed
+  CD34-Cord-Blood: CD34-Cord-Blood.bed
+  CD4Tcell: CD4Tcell.bed
+  CD8Tcell: CD8Tcell.bed
+  Mono: Mono.bed
+  NKcell: NKcell.bed
