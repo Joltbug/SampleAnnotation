@@ -137,7 +137,7 @@ def read_reference_data(ref_folder, verbose = False):
         
     return ref_subtype_peaks, ref_bk_peak
 
-def compute_enrichment_score(mat, intersect, id2peak, set2_ref, num_cores = 1):
+def compute_enrichment_score_parallel(mat, intersect, id2peak, set2_ref, num_cores = 1):
     scores = []
     interset = set(intersect[:,0])
     pool = Pool(num_cores)
@@ -149,50 +149,41 @@ def compute_enrichment_score(mat, intersect, id2peak, set2_ref, num_cores = 1):
     pool.join()   
     return scores
 
-if __name__ == "__main__":      
-    configs = parse_args(sys.argv)
-    check_input(configs)
-    input_filename = configs['inP']
-    read_input(input_filename, verbose = False)
-    ref_subtype_peaks, ref_bk_peak = read_reference_data(ref_folder)
-
-    ## intersect
-    if(verbose): print("Calculating Bed Overlaps")
-
-    intersect = bdO.BedOverlap(id2peak, ref_bk_peak, 50)
-
-    set2_ref = []
-    for i, (ct, peaks) in enumerate(ref_subtype_peaks):
-        peaks_intersect = bdO.BedOverlap(id2peak, peaks, 50)
-        ref_subtype_peaks[i] = (ct, peaks_intersect)
-
-    if(verbose): print("Calculating Fischer Exact Scores")
-
+def compute_enrichment_score_series(mat, intersect, id2peak, set2_ref):
+    scores = []
     mat1 = data.drop("id2peak",axis=1).to_numpy()
-    compute_enrichment_score(mat1, intersect, id2peak, set_ref)
+    interset = set(intersect[:,0])
+    for i in range (mat1.shape[1]):
+        s1 = set([id2peak[j] for j in np.where(mat1[:, i] > 0.5)[0]])
+        tmp = []
+        for c, s2 in set2_ref:
+            s2 = set(s2[:,0])
+            if not (s1 & s2):
+                tmp.append(0)
+            else:
+                tmp.append(get_fisher_exact(s1, s2, interset)[0])
+        scores.append(tmp)
+    return scores
 
 
-    #if(multiple):
-    scores = compute_enrichment_score(mat, intersect, id2peak, set_ref, num_cores = 1)
-
-    if(verbose): print("Intializing TSNE")
-
-    scoresNP = np.array(scores)
+def initialize_TSNE(mat1):
     mat = mat1.T / np.sum(mat1.T, axis = 1, keepdims=True)
     clf0 = PCA(n_components = 10)
     if(verbose): clf1 = TSNE(n_components = 2, verbose=1)
     else: clf1 = TSNE(n_components = 2)
     df_tsne = clf1.fit_transform(clf0.fit_transform(mat))
+    return df_tsne
 
+def create_plot(set_ref, figsize, tsne, score_array, verbose = False):
+    if(verbose): print("Generating Plots")
     dist = len(set2_ref)/figure
     if (dist.is_integer()): 
         dist = int(dist)
         fig, axes = plt.subplots(dist, figure, figsize = ((figure *4), (dist*3)))
     else:
-        fig, axes = plt.subplots(len(set2_ref), 1, figsize = (3,(len(set2_ref) *4)))
+        fig, axes = plt.subplots(len(set_ref), 1, figsize = (3,(len(set2_ref) *4)))
         figure = 1
-
-    for i, (c, _) in enumerate(set2_ref):
+    for i, (c, _) in enumerate(set_ref):
         if(figure == 1 or dist == 1): ax = axes[i]
         else: ax = axes[i // figure, i % figure]
         vmax, vmin = np.percentile(scoresNP[:, i], 99), np.percentile(scoresNP[:, i], 1)
@@ -202,34 +193,66 @@ if __name__ == "__main__":
         ax.set_xticks([])
         ax.set_yticks([])
     axes[-1,-1].axis('off')
+    return plt
+    
+def output(ref, intersect,set_ref,scores):
+    #write output file for the intersection
+    IntersectFile = open(fn_bk1+'Intersection.tsv', "w+")
+    IntersectFile.write("Chr in Data\tChr in Bk\tOverlap percent\n")
+    IntersectWriter= csv.writer(IntersectFile, delimiter='\t')
+    for line in intersect: IntersectWriter.writerow(line)
+    IntersectFile.close()
+    #TODO: change output to represent variable refrence datasets
 
-    if(outP): plt.savefig(inP + '.png')
+    #write output file for the intersection of cell types
+    for c, s2 in set2_ref:
+        setFile = open( c+")_Intersection.tsv" , "w+")
+        setFile.write("Chr in Data\tChr in Bk\tOverlap percent\n")
+        setWriter= csv.writer(setFile, delimiter='\t')
+        for line in s2: setWriter.writerow(line)
+        setFile.close()
+
+     #write output file for fischer exact scores
+    ScoreFile = open('DatafischerScores.tsv', "w+")
+    ScoreWriter= csv.writer(ScoreFile, delimiter='\t')
+    for line in scores: ScoreWriter.writerow(line)
+    ScoreFile.close()    
+    
+if __name__ == "__main__":      
+    configs = parse_args(sys.argv)
+    check_input(configs)
+    input_filename = configs['inP']
+    read_input(input_filename, verbose = False)
+    ref_subtype_peaks, ref_bk_peak = read_reference_data(ref_folder)
+    
+    if(configs['verbose']): print("Calculating Bed Overlaps")
+    intersect = bdO.BedOverlap(id2peak, ref_bk_peak, 50)
+    #TODO: Add option to set overlap threshold
+
+    set_ref = []
+    for i, (ct, peaks) in enumerate(ref_subtype_peaks):
+        peaks_intersect = bdO.BedOverlap(id2peak, peaks, 50)
+        ref_subtype_peaks[i] = (ct, peaks_intersect)
+        set_ref.append((ct, peaks_intersect))
+
+    if(configs['verbose']): print("Calculating Fischer Exact Scores")
+
+    mat1 = data.drop("id2peak",axis=1).to_numpy()
+
+    if(configs['multiple']):
+        scores = compute_enrichment_score_parallel(mat, intersect, id2peak, set_ref, num_cores = 1)
+        #TODO: add option for describing the number of cores to use
+    else: scores = compute_enrichment_score_series(mat, intersect, id2peak, set_ref)
+
+    if(configs['verbose']): print("Intializing TSNE")
+    df_tsne = initialize_TSNE(mat1)
+    
+    plt = create_plot(set2_ref, configs['figure'], df_tsne, np.array(scores),configs['verbose'])
+    if(configs['outP']): plt.savefig(input_filename + '.png')
+        #TODO: change figure option to be the name wanted for the figure
     plt.show()
 
-    def output():
-        if(verbose): print("Outputing")
-        #write output file for the intersection
-        IntersectFile = open(fn_bk1+'Intersection.tsv', "w+")
-        IntersectFile.write("Chr in Data\tChr in Bk\tOverlap percent\n")
-        IntersectWriter= csv.writer(IntersectFile, delimiter='\t')
-        for line in intersect: IntersectWriter.writerow(line)
-        IntersectFile.close()
-
-        #write output file for the intersection of cell types
-        for c, s2 in set2_ref:
-            setFile = open( c+")_Intersection.tsv" , "w+")
-            setFile.write("Chr in Data\tChr in Bk\tOverlap percent\n")
-            setWriter= csv.writer(setFile, delimiter='\t')
-            for line in s2: setWriter.writerow(line)
-            setFile.close()
-
-        #write output file for fischer exact scores
-        ScoreFile = open('DatafischerScores.tsv', "w+")
-        ScoreFile.write("Ex\tIn\tMic\tEnd\tAst\tOpc\tOli\n")
-        IntersectWriter= csv.writer(IntersectFile, delimiter='\t')
-        for line in intersect: IntersectWriter.writerow(line)
-        sFile.close()
-    if(verbose): print("Outputting")
-    if(outP): output()
+    if(configs['verbose'] && configs['outP']): print("Outputting")
+    if(configs['outP']): output(configs['ref'], intersect, set_ref, scores)
 
     sys.exit(0)
