@@ -252,7 +252,7 @@ if __name__ == "__main__":
         #TODO: change figure option to be the name wanted for the figure
     plt.show()
 
-    if(configs['verbose'] && configs['outP']): print("Outputting")
+    if(configs['verbose'] and configs['outP']): print("Outputting")
     if(configs['outP']): output(configs['ref'], intersect, set_ref, scores)
 
     sys.exit(0)
