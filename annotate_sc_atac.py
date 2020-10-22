@@ -45,8 +45,8 @@ def scorefun(input):
 
 def parse_args(full_cmd_arguments):
     argument_list = full_cmd_arguments[1:]
-    short_options = "i:r:b:f:vom"
-    long_options = ["input=", "ref_folder=", "background=","figure_cols=", "verbose", "output","multiple_processing"]
+    short_options = "i:r:b:f:m:t:vo"
+    long_options = ["input=", "ref_folder=", "background=","figure_cols=","multiple_cores=","threshold=", "verbose", "output"]
 
     try:
         arguments, values = getopt.getopt(argument_list, short_options, long_options)
@@ -60,21 +60,24 @@ def parse_args(full_cmd_arguments):
     outP = False
     ref = False
     bkg = False
-    multiple = False
+    multiple = 1
+    threshold = 50
 
     for a, v in arguments:
         if a in ("-v", "--verbose"):
             verbose = True
         elif a in ("-f", "--figure_cols"):
             figure = v
-        elif current_argument in ("-m", "--multiple_processing"):
-            multiple = True
+        elif current_argument in ("-m", "--multiple_cores"):
+            multiple = v
         elif current_argument in ("-o", "--output"):
             outP = True
         elif current_argument in ("-i", "--input"):
             inP = v
         elif current_argument in ("-r", "--ref_folder"):
             ref = v
+        elif current_argument in ("-t", "--threshold"):
+            threshold = v
         
     configs = {'figure':figure,
               'verbose':verbose,
@@ -83,6 +86,7 @@ def parse_args(full_cmd_arguments):
                'ref': ref,
                'bkg': bkg,
                'multiple': multiple,
+               'threshold': threshold,
               }
         
     return configs
@@ -137,34 +141,30 @@ def read_reference_data(ref_folder, verbose = False):
         
     return ref_subtype_peaks, ref_bk_peak
 
-def compute_enrichment_score_parallel(mat, intersect, id2peak, set2_ref, num_cores = 1):
+def compute_enrichment_score(mat, intersect, id2peak, set2_ref, num_cores):
     scores = []
     interset = set(intersect[:,0])
-    pool = Pool(num_cores)
-    for i in range (mat.shape[1]):
-        s1 = set([id2peak[j] for j in np.where(mat[:, i] > 0.5)[0]])
-        input = [(s1, set2_ref, interset)]
-        pool.apply_async(scorefun, input, callback=scores.append)
-    pool.close()
-    pool.join()   
+    if(num_cores >1):
+        pool = Pool(num_cores)
+        for i in range (mat.shape[1]):
+            s1 = set([id2peak[j] for j in np.where(mat[:, i] > 0.5)[0]])
+            input = [(s1, set2_ref, interset)]
+            pool.apply_async(scorefun, input, callback=scores.append)
+        pool.close()
+        pool.join()
+    else:
+        mat1 = data.drop("id2peak",axis=1).to_numpy()
+        for i in range (mat1.shape[1]):
+            s1 = set([id2peak[j] for j in np.where(mat1[:, i] > 0.5)[0]])
+            tmp = []
+            for c, s2 in set2_ref:
+                s2 = set(s2[:,0])
+                if not (s1 & s2):
+                    tmp.append(0)
+                else:
+                    tmp.append(get_fisher_exact(s1, s2, interset)[0])
+            scores.append(tmp)
     return scores
-
-def compute_enrichment_score_series(mat, intersect, id2peak, set2_ref):
-    scores = []
-    mat1 = data.drop("id2peak",axis=1).to_numpy()
-    interset = set(intersect[:,0])
-    for i in range (mat1.shape[1]):
-        s1 = set([id2peak[j] for j in np.where(mat1[:, i] > 0.5)[0]])
-        tmp = []
-        for c, s2 in set2_ref:
-            s2 = set(s2[:,0])
-            if not (s1 & s2):
-                tmp.append(0)
-            else:
-                tmp.append(get_fisher_exact(s1, s2, interset)[0])
-        scores.append(tmp)
-    return scores
-
 
 def initialize_TSNE(mat1):
     mat = mat1.T / np.sum(mat1.T, axis = 1, keepdims=True)
@@ -198,11 +198,11 @@ def create_plot(set_ref, figsize, tsne, score_array, verbose = False):
 def output(ref, intersect,set_ref,scores):
     #write output file for the intersection
     IntersectFile = open(fn_bk1+'Intersection.tsv', "w+")
-    IntersectFile.write("Chr in Data\tChr in Bk\tOverlap percent\n")
+    for i, (c, _) in enumerate(set_ref):
+        IntersectFile.write(c +"\t")
     IntersectWriter= csv.writer(IntersectFile, delimiter='\t')
     for line in intersect: IntersectWriter.writerow(line)
     IntersectFile.close()
-    #TODO: change output to represent variable refrence datasets
 
     #write output file for the intersection of cell types
     for c, s2 in set2_ref:
@@ -226,12 +226,12 @@ if __name__ == "__main__":
     ref_subtype_peaks, ref_bk_peak = read_reference_data(ref_folder)
     
     if(configs['verbose']): print("Calculating Bed Overlaps")
-    intersect = bdO.BedOverlap(id2peak, ref_bk_peak, 50)
+    intersect = bdO.BedOverlap(id2peak, ref_bk_peak, configs['threshold'])
     #TODO: Add option to set overlap threshold
 
     set_ref = []
     for i, (ct, peaks) in enumerate(ref_subtype_peaks):
-        peaks_intersect = bdO.BedOverlap(id2peak, peaks, 50)
+        peaks_intersect = bdO.BedOverlap(id2peak, peaks, configs['threshold'])
         ref_subtype_peaks[i] = (ct, peaks_intersect)
         set_ref.append((ct, peaks_intersect))
 
@@ -239,17 +239,13 @@ if __name__ == "__main__":
 
     mat1 = data.drop("id2peak",axis=1).to_numpy()
 
-    if(configs['multiple']):
-        scores = compute_enrichment_score_parallel(mat, intersect, id2peak, set_ref, num_cores = 1)
-        #TODO: add option for describing the number of cores to use
-    else: scores = compute_enrichment_score_series(mat, intersect, id2peak, set_ref)
-
+    scores = compute_enrichment_score_parallel(mat, intersect, id2peak, set_ref, configs['multiple']
+    
     if(configs['verbose']): print("Intializing TSNE")
     df_tsne = initialize_TSNE(mat1)
     
     plt = create_plot(set2_ref, configs['figure'], df_tsne, np.array(scores),configs['verbose'])
     if(configs['outP']): plt.savefig(input_filename + '.png')
-        #TODO: change figure option to be the name wanted for the figure
     plt.show()
 
     if(configs['verbose'] and configs['outP']): print("Outputting")
