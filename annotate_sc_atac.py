@@ -132,11 +132,11 @@ def read_reference_data(ref_folder, verbose = False):
         for cell in refinfo['cell_type']:
             print (cell,':',refinfo['cell_type'][cell])    
     
-    ref_bk_peak = bdO.BedScan(bkg_file)
+    ref_bk_peak = bdO.BedScanPd(bkg_file)
     
     ref_subtype_peaks = []
     for c, f1 in fn_target:
-        scan = bdO.BedScan(f1)    
+        scan = bdO.BedScanPd(f1)    
         ref_subtype_peaks.append((c, scan))
         
     return ref_subtype_peaks, ref_bk_peak
@@ -222,7 +222,7 @@ if __name__ == "__main__":
     configs = parse_args(sys.argv)
     check_input(configs)
     input_filename = configs['inP']
-    read_input(input_filename, verbose = False)
+    data, id2peak = read_input(input_filename, verbose = False)
     ref_subtype_peaks, ref_bk_peak = read_reference_data(ref_folder)
     
     if(configs['verbose']): print("Calculating Bed Overlaps")
@@ -237,9 +237,9 @@ if __name__ == "__main__":
 
     if(configs['verbose']): print("Calculating Fischer Exact Scores")
 
-    mat1 = data.drop("id2peak",axis=1).to_numpy()
+    mat = data.drop("id2peak",axis=1).to_numpy()
 
-    scores = compute_enrichment_score_parallel(mat, intersect, id2peak, set_ref, configs['multiple']
+    scores = compute_enrichment_score(mat, intersect, id2peak, set_ref, configs['multiple'])
     
     if(configs['verbose']): print("Intializing TSNE")
     df_tsne = initialize_TSNE(mat1)

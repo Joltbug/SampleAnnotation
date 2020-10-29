@@ -65,7 +65,7 @@ def BedOverlap(bed1, bed2, overlapPercent):
             tempList.append(bed2[p1])
             
             ### TODO confirm if this should be integer?
-            tempList.append('100') 
+            tempList.append(100) 
             output.append(tempList)
             p0 +=1
         elif a0<=a1<=b1<=b0:
@@ -111,6 +111,14 @@ def BedScan(fileName, delim):
     out = list((row[0], int(row[1]), int(row[2])) for row in output)
     return out
 
+def BedScanPd(fileName):
+    data = pd.read_csv(fileName,delimiter='\t',skiprows=1, header=None)
+    data.rename(columns={'0':'chr'})
+    output = []
+    output = data.values.tolist()
+    out = list((row[0], int(row[1]), int(row[2])) for row in output)
+    out.sort( key = lambda x: (x[0], x[1]))
+    return out
 
 # In[10]:
 
