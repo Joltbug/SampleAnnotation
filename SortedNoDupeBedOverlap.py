@@ -19,10 +19,15 @@ def overlap(min1, max1, min2, max2):
 
 
 def BedOverlap(bed1, bed2, overlapPercent):
+    ## inputs: bed1, bed2, list of (chr, start, end)
+    ## overlapPercent: float ranges from 0 - 100
+    ## output: a list of bed1 peaks that has over overlap higer than overlapPercent
+    
     p0, p1 = 0, 0
     output = []
     
-    ##### TODO change to raise error message
+    ### TODO change to raise error message
+    ### (optional) can separate this as a check_bed_list function
     if(not(all((isinstance(x[0], str)) and (isinstance(x[1], int)) and (isinstance(x[2], int))) for x in bed1)): return "Invalid Input in Bed1"
     if(not(all((isinstance(x[0], str)) and (isinstance(x[1], int)) and (isinstance(x[2], int))) for x in bed2)): return "Invalid Input in Bed2"
     
@@ -94,11 +99,6 @@ def BedOverlap(bed1, bed2, overlapPercent):
     ## TODO: output list
     return np.array(output,dtype=object)
         
-    
-
-
-# In[9]:
-
 
 def BedScan(fileName, delim):
     output = []
@@ -111,7 +111,13 @@ def BedScan(fileName, delim):
     out = list((row[0], int(row[1]), int(row[2])) for row in output)
     return out
 
+
 def BedScanPd(fileName):
+    ## TODO: why skiprows = 1?
+    ## consider rename this function to something like read bed file, BedScan is not very clear about its function
+    ## assumed input: tab separated, no header, no index
+    ## can use BedScanPd(fileName, skiprows=0, header=None) ## default is standard bed format
+    ## data = pd.read_csv(fileName,delimiter='\t',skiprows=skiprows, header=header, index = None)
     data = pd.read_csv(fileName,delimiter='\t',skiprows=1, header=None)
     data.rename(columns={'0':'chr'})
     output = []

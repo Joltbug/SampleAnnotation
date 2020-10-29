@@ -22,7 +22,7 @@ from multiprocessing import Pool
 
 
 def get_fisher_exact(s1, s2, sbk):
-    
+    ## input: s1, s2, sbk, three sets
     n1 = len(s1 & s2)
     n2 = len(s1 & (sbk - s2))
     n3 = len((sbk - s1) & s2)
@@ -45,6 +45,9 @@ def scorefun(input):
 
 def parse_args(full_cmd_arguments):
     argument_list = full_cmd_arguments[1:]
+    ## TODO: remove background argument
+    ## TODO: change to argparse?
+    ## default values?
     short_options = "i:r:b:f:m:t:vo"
     long_options = ["input=", "ref_folder=", "background=","figure_cols=","multiple_cores=","threshold=", "verbose", "output"]
 
@@ -95,6 +98,8 @@ def check_input(configs):
     if (not configs['inP']):
         print("Missing input file")
         sys.exit(2)
+        
+    ## TODO bkg arg will be removed
     if (not configs['bkg']):
         print("Missing background file")
         sys.exit(2)
@@ -104,7 +109,16 @@ def check_input(configs):
 
 def read_input(input_filename, verbose = False):
     if(verbose): print("Reading Input File")
+    
+    ## TODO: change it to
+    '''
+    data = pd.read_csv(input_filename, index_col = 0) ## assuming first column are peaks
 
+    id2peak = []
+    for c in data.index:
+        temp = c.split('_')
+        
+    '''
     data = pd.read_csv(input_filename)
 
     data.rename( columns={'Unnamed: 0':'id2peak'}, inplace=True)
@@ -153,9 +167,12 @@ def compute_enrichment_score(mat, intersect, id2peak, set2_ref, num_cores):
         pool.close()
         pool.join()
     else:
+        ## TODO data is referenced externally, mat1 shoud be just mat       
         mat1 = data.drop("id2peak",axis=1).to_numpy()
         for i in range (mat1.shape[1]):
             s1 = set([id2peak[j] for j in np.where(mat1[:, i] > 0.5)[0]])
+            ## TODO change the following to be just
+            ## tmp = scorefun((s1, set2_ref, interset))
             tmp = []
             for c, s2 in set2_ref:
                 s2 = set(s2[:,0])
@@ -219,6 +236,8 @@ def output(ref, intersect,set_ref,scores):
     ScoreFile.close()    
     
 if __name__ == "__main__":      
+    
+    ## TODO: add one or two example command
     configs = parse_args(sys.argv)
     check_input(configs)
     input_filename = configs['inP']
@@ -236,11 +255,14 @@ if __name__ == "__main__":
         set_ref.append((ct, peaks_intersect))
 
     if(configs['verbose']): print("Calculating Fischer Exact Scores")
-
+    
+    ## TODO if make changes to read_input, then
+    ## mat = data.values
     mat = data.drop("id2peak",axis=1).to_numpy()
 
     scores = compute_enrichment_score(mat, intersect, id2peak, set_ref, configs['multiple'])
     
+    ## TODO: spase between if and ( ?
     if(configs['verbose']): print("Intializing TSNE")
     df_tsne = initialize_TSNE(mat1)
     
