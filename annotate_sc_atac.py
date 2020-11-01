@@ -5,7 +5,7 @@ import os
 import seaborn as sns
 
 import matplotlib.pyplot as plt
-get_ipython().run_line_magic('matplotlib', 'inline')
+#get_ipython().run_line_magic('matplotlib', 'inline')
 
 import SortedNoDupeBedOverlap as bdO
 
@@ -46,7 +46,7 @@ def scorefun(input):
 def parse_args(full_cmd_arguments):
     argument_list = full_cmd_arguments[1:]
     short_options = "i:r:b:f:m:t:vo"
-    long_options = ["input=", "ref_folder=", "background=","figure_cols=","multiple_cores=","threshold=", "verbose", "output"]
+    long_options = ["input=", "ref_folder=","figure_cols=","multiple_cores=","threshold=", "verbose", "output"]
 
     try:
         arguments, values = getopt.getopt(argument_list, short_options, long_options)
@@ -59,7 +59,6 @@ def parse_args(full_cmd_arguments):
     inP = False
     outP = False
     ref = False
-    bkg = False
     multiple = 1
     threshold = 50
 
@@ -68,15 +67,15 @@ def parse_args(full_cmd_arguments):
             verbose = True
         elif a in ("-f", "--figure_cols"):
             figure = v
-        elif current_argument in ("-m", "--multiple_cores"):
+        elif a in ("-m", "--multiple_cores"):
             multiple = v
-        elif current_argument in ("-o", "--output"):
+        elif a in ("-o", "--output"):
             outP = True
-        elif current_argument in ("-i", "--input"):
+        elif a in ("-i", "--input"):
             inP = v
-        elif current_argument in ("-r", "--ref_folder"):
+        elif a in ("-r", "--ref_folder"):
             ref = v
-        elif current_argument in ("-t", "--threshold"):
+        elif a in ("-t", "--threshold"):
             threshold = v
         
     configs = {'figure':figure,
@@ -84,7 +83,6 @@ def parse_args(full_cmd_arguments):
                'inP': inP,
                'outP': outP,
                'ref': ref,
-               'bkg': bkg,
                'multiple': multiple,
                'threshold': threshold,
               }
@@ -94,9 +92,6 @@ def parse_args(full_cmd_arguments):
 def check_input(configs):
     if (not configs['inP']):
         print("Missing input file")
-        sys.exit(2)
-    if (not configs['bkg']):
-        print("Missing background file")
         sys.exit(2)
     if (not configs['ref']):
         print("Missing reference folder address")
@@ -223,7 +218,7 @@ if __name__ == "__main__":
     check_input(configs)
     input_filename = configs['inP']
     data, id2peak = read_input(input_filename, verbose = False)
-    ref_subtype_peaks, ref_bk_peak = read_reference_data(ref_folder)
+    ref_subtype_peaks, ref_bk_peak = read_reference_data(configs['ref'])
     
     if(configs['verbose']): print("Calculating Bed Overlaps")
     intersect = bdO.BedOverlap(id2peak, ref_bk_peak, configs['threshold'])
