@@ -103,8 +103,9 @@ def check_input(configs):
 def read_input(input_filename, verbose = False):
     if(verbose): print("Reading Input File")
     
-    ## TODO: change it to
-    data = pd.read_csv(input_filename, index_col = 0)
+    ## TODO: change it to data = pd.read_csv(input_filename, index_col = 0) I tried doing this, but it was throwing an error on the append, I will need to look into further
+    data = pd.read_csv(input_filename)
+    data.rename( columns={'Unnamed: 0':'id2peak'}, inplace=True)
     id2peak = []
     for c in data['id2peak']:
         temp = c.split('_')
