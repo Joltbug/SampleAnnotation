@@ -69,7 +69,7 @@ def parse_args(full_cmd_arguments):
         if a in ("-v", "--verbose"):
             verbose = True
         elif a in ("-f", "--figure_cols"):
-            figure = v
+            figure = int(v)
         elif a in ("-m", "--multiple_cores"):
             multiple = v
         elif a in ("-o", "--output"):
@@ -152,7 +152,7 @@ def compute_enrichment_score(mat, intersect, id2peak, set2_ref, num_cores):
         pool.join()
     else:
         ## TODO data is referenced externally, mat1 shoud be just mat       
-        mat = data.drop("id2peak",axis=1).to_numpy()
+        #mat = np.array(id2peak)
         for i in range (mat.shape[1]):
             s1 = set([id2peak[j] for j in np.where(mat[:, i] > 0.5)[0]])
             ## TODO change the following to be just
@@ -167,7 +167,7 @@ def compute_enrichment_score(mat, intersect, id2peak, set2_ref, num_cores):
             scores.append(tmp)
     return scores
 
-def initialize_TSNE(mat1):
+def initialize_TSNE(mat1, verbose):
     mat = mat1.T / np.sum(mat1.T, axis = 1, keepdims=True)
     clf0 = PCA(n_components = 10)
     if(verbose): clf1 = TSNE(n_components = 2, verbose=1)
@@ -175,21 +175,21 @@ def initialize_TSNE(mat1):
     df_tsne = clf1.fit_transform(clf0.fit_transform(mat))
     return df_tsne
 
-def create_plot(set_ref, figsize, tsne, score_array, verbose = False):
+def create_plot(set_ref, figx, tsne, score_array, verbose = False):
     if(verbose): print("Generating Plots")
-    dist = len(set2_ref)/figure
+    dist = len(set_ref)/figx
     if (dist.is_integer()): 
         dist = int(dist)
-        fig, axes = plt.subplots(dist, figure, figsize = ((figure *4), (dist*3)))
+        fig, axes = plt.subplots(dist, figx, figsize = ((figx *4), (dist*3)))
     else:
-        fig, axes = plt.subplots(len(set_ref), 1, figsize = (3,(len(set2_ref) *4)))
-        figure = 1
+        fig, axes = plt.subplots(len(set_ref), 1, figsize = (3,(len(set_ref) *4)))
+        figx = 1
     for i, (c, _) in enumerate(set_ref):
-        if(figure == 1 or dist == 1): ax = axes[i]
-        else: ax = axes[i // figure, i % figure]
-        vmax, vmin = np.percentile(scoresNP[:, i], 99), np.percentile(scoresNP[:, i], 1)
+        if(figx == 1 or dist == 1): ax = axes[i]
+        else: ax = axes[i // figx, i % figx]
+        vmax, vmin = np.percentile(score_array[:, i], 99), np.percentile(score_array[:, i], 1)
         ax.scatter(df_tsne[:,0], df_tsne[:,1], 
-                s = 5, c = scoresNP[:, i], cmap = 'RdBu_r', vmax = vmax, vmin = vmin)
+                s = 5, c = score_array[:, i], cmap = 'RdBu_r', vmax = vmax, vmin = vmin)
         ax.set_title(c)
         ax.set_xticks([])
         ax.set_yticks([])
@@ -198,7 +198,7 @@ def create_plot(set_ref, figsize, tsne, score_array, verbose = False):
     
 def output(ref, intersect,set_ref,scores):
     #write output file for the intersection
-    IntersectFile = open(fn_bk1+'Intersection.tsv', "w+")
+    IntersectFile = open(ref+'Intersection.tsv', "w+")
     for i, (c, _) in enumerate(set_ref):
         IntersectFile.write(c +"\t")
     IntersectWriter= csv.writer(IntersectFile, delimiter='\t')
@@ -206,7 +206,7 @@ def output(ref, intersect,set_ref,scores):
     IntersectFile.close()
 
     #write output file for the intersection of cell types
-    for c, s2 in set2_ref:
+    for c, s2 in set_ref:
         setFile = open( c+")_Intersection.tsv" , "w+")
         setFile.write("Chr in Data\tChr in Bk\tOverlap percent\n")
         setWriter= csv.writer(setFile, delimiter='\t')
@@ -248,9 +248,9 @@ if __name__ == "__main__":
     
     ## TODO: spase between if and ( ?
     if(configs['verbose']): print("Intializing TSNE")
-    df_tsne = initialize_TSNE(mat1)
+    df_tsne = initialize_TSNE(mat, configs['verbose'])
     
-    plt = create_plot(set2_ref, configs['figure'], df_tsne, np.array(scores),configs['verbose'])
+    plt = create_plot(set_ref, configs['figure'], df_tsne, np.array(scores),configs['verbose'])
     if(configs['outP']): plt.savefig(input_filename + '.png')
     plt.show()
 
