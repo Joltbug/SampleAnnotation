@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import math
 import seaborn as sns
 
 import matplotlib.pyplot as plt
@@ -100,17 +101,16 @@ def check_input(configs):
         print("Missing reference folder address")
         sys.exit(2)
 
+def intConvert(base):
+    sublist = base.split('_')
+    return [sublist[0], int(sublist[1]), int(sublist[2])]        
+
 def read_input(input_filename, verbose = False):
     if(verbose): print("Reading Input File")
     
-    ## TODO: change it to data = pd.read_csv(input_filename, index_col = 0) I tried doing this, but it was throwing an error on the append, I will need to look into further
-    data = pd.read_csv(input_filename)
-    data.rename( columns={'Unnamed: 0':'id2peak'}, inplace=True)
-    id2peak = []
-    for c in data['id2peak']:
-        temp = c.split('_')
-        id2peak.append((temp[0], int(temp[1]), int(temp[2])))
-
+    data = pd.read_csv(inP, index_col = 0)
+    id2peak = data.index.tolist()
+    id2peak = list(map(intConvert, id2peak))
     id2peak.sort( key = lambda x: (x[0], x[1]))    
     return data, id2peak
 
@@ -176,24 +176,41 @@ def initialize_TSNE(mat1, verbose):
     return df_tsne
 
 def create_plot(set_ref, figx, tsne, score_array, verbose = False):
-    if(verbose): print("Generating Plots")
-    dist = len(set_ref)/figx
+    figure = 3
+    dist = len(set2_ref)/figure
     if (dist.is_integer()): 
         dist = int(dist)
-        fig, axes = plt.subplots(dist, figx, figsize = ((figx *4), (dist*3)))
+        fig, axes = plt.subplots(dist, figure, figsize = ((figure *4), (dist*3)))
     else:
-        fig, axes = plt.subplots(len(set_ref), 1, figsize = (3,(len(set_ref) *4)))
-        figx = 1
-    for i, (c, _) in enumerate(set_ref):
-        if(figx == 1 or dist == 1): ax = axes[i]
-        else: ax = axes[i // figx, i % figx]
-        vmax, vmin = np.percentile(score_array[:, i], 99), np.percentile(score_array[:, i], 1)
+        dist = math.ceil(dist)
+        fig, axes = plt.subplots(dist, figure, figsize = ((figure *4), (dist*3)))
+        #figure = 1
+    
+    x = 0
+    y = 0
+    for i, (c, _) in enumerate(set2_ref):
+        if(figure == 1 or dist == 1): ax = axes[i]
+        else: ax = axes[y][x]
+        vmax, vmin = np.percentile(scoresNP[:, i], 99), np.percentile(scoresNP[:, i], 1)
         ax.scatter(df_tsne[:,0], df_tsne[:,1], 
-                s = 5, c = score_array[:, i], cmap = 'RdBu_r', vmax = vmax, vmin = vmin)
+                s = 5, c = scoresNP[:, i], cmap = 'RdBu_r', vmax = vmax, vmin = vmin)
         ax.set_title(c)
         ax.set_xticks([])
         ax.set_yticks([])
-    axes[-1,-1].axis('off')
+        x = x+1
+        if (x == figure):
+            x = 0
+            y = y+ 1
+    while(y != dist):
+        ax = axes[y][x]
+        ax.set_visible(False)
+        x = x+1
+        if (x == figure):
+            x = 0
+            y = y+ 1
+
+    if(outP): plt.savefig(inP + '.png')
+    plt.show()
     return plt
     
 def output(ref, intersect,set_ref,scores):
